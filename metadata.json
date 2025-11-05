@@ -1,0 +1,5 @@
+{
+  "name": "Flujo - Sistema Integral de Ventas",
+  "description": "Una aplicación de punto de venta (POS) responsive con un sistema robusto de catálogo, transacciones y seguimiento de métricas en tiempo real, mejorado con IA de Gemini para promociones de productos.",
+  "requestFramePermissions": []
+}
