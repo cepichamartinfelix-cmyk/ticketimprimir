@@ -4,8 +4,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface HeaderProps {
-  currentPage: 'sales' | 'dashboard';
-  setCurrentPage: (page: 'sales' | 'dashboard') => void;
+  currentPage: 'sales' | 'dashboard' | 'premio';
+  setCurrentPage: (page: 'sales' | 'dashboard' | 'premio') => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ currentPage, setCurrentPage }) => {
@@ -19,7 +19,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setCurrentPage }) => {
     }
   };
   
-  const NavButton: React.FC<{ page: 'sales' | 'dashboard', label: string }> = ({ page, label }) => (
+  const NavButton: React.FC<{ page: 'sales' | 'dashboard' | 'premio', label: string }> = ({ page, label }) => (
     <button
       onClick={() => setCurrentPage(page)}
       className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -39,6 +39,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setCurrentPage }) => {
         <nav className="flex items-center gap-2">
             <NavButton page="sales" label="Ventas" />
             <NavButton page="dashboard" label="Dashboard" />
+            {user?.role === 'ADMIN' && <NavButton page="premio" label="Premio" />}
         </nav>
       </div>
       <div className="flex items-center gap-4">

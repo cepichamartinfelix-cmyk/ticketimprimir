@@ -9,8 +9,9 @@ import DashboardPage from './pages/DashboardPage';
 import Header from './components/layout/Header';
 import { Ticket } from './types';
 import { generateTicket, cancelTicket as cancelTicketApi } from './services/api';
+import PremioPage from './pages/PremioPage';
 
-type Page = 'sales' | 'dashboard';
+type Page = 'sales' | 'dashboard' | 'premio';
 
 const App: React.FC = () => {
   return (
@@ -51,6 +52,7 @@ const Main: React.FC = () => {
       <main className="flex-grow p-4 md:p-6 lg:p-8">
         {currentPage === 'sales' && <SalesPage user={user} />}
         {currentPage === 'dashboard' && <DashboardPage />}
+        {currentPage === 'premio' && user.role === 'ADMIN' && <PremioPage />}
       </main>
     </div>
   );

@@ -26,12 +26,19 @@ export const getCategories = async () => Promise.resolve(categories);
 
 export const getProducts = async () => Promise.resolve(products);
 
-export const updateProductPromotion = (productId: string, reason: string) => {
-    products = products.map(p => 
-        p.id === productId 
-        ? {...p, isPromotional: true, promotionReason: reason}
-        : p
-    );
+export const updateSingleProduct = async (productId: string, updates: Partial<Pick<Product, 'isPromotional' | 'promotionReason'>>): Promise<Product> => {
+    let updatedProduct: Product | undefined;
+    products = products.map(p => {
+        if (p.id === productId) {
+            updatedProduct = { ...p, ...updates };
+            return updatedProduct;
+        }
+        return p;
+    });
+    if (!updatedProduct) {
+        throw new Error('Product not found');
+    }
+    return Promise.resolve(updatedProduct);
 };
 
 // --- Tickets ---

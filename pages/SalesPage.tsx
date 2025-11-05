@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Category, Product, User } from '../types';
-import { getCategories, getProducts, updateProductPromotion } from '../services/api';
+// FIX: Removed unused import 'updateProductPromotion' which is not exported from '../services/api'.
+import { getCategories, getProducts } from '../services/api';
 import { getPromotionalProductHighlight } from '../services/geminiService';
 import ProductGrid from '../components/sales/ProductGrid';
 import Cart from '../components/sales/Cart';

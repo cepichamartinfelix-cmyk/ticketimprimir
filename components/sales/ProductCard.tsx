@@ -17,7 +17,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     const hours = [];
     // Business hours are 7 to 23 (7 AM to 11 PM)
     for (let i = 7; i <= 23; i++) {
-      if (i > currentHour) {
+      if (i >= currentHour) {
         hours.push(i);
       }
     }
@@ -45,7 +45,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const isAddToCartDisabled = selectedHour === '' || availableHours.length === 0;
 
   return (
-    <div className={`bg-theme-card rounded-lg shadow-md overflow-hidden border ${product.isPromotional ? 'border-theme-accent ring-2 ring-theme-accent/50' : 'border-theme-border'} flex flex-col`}>
+    <div 
+        className={`bg-theme-card rounded-lg shadow-md overflow-hidden border ${product.isPromotional ? 'border-theme-accent ring-2 ring-theme-accent/50' : 'border-theme-border'} flex flex-col`}
+        title={product.isPromotional ? product.promotionReason : ''}
+    >
       {product.isPromotional && (
         <div className="bg-theme-accent text-white text-xs font-bold px-3 py-1 text-center">
             {product.promotionReason || '¡Promoción!'}
