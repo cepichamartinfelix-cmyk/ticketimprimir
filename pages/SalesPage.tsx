@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Category, Product, User } from '../types';
-// FIX: Removed unused import 'updateProductPromotion' which is not exported from '../services/api'.
-import { getCategories, getProducts } from '../services/api';
+import { Category, Product, User, Promotion } from '../types';
+import { getCategories, getProducts, getPromotions } from '../services/api';
 import { getPromotionalProductHighlight } from '../services/geminiService';
 import ProductGrid from '../components/sales/ProductGrid';
 import Cart from '../components/sales/Cart';
 import CategoryTabs from '../components/sales/CategoryTabs';
+import { format } from 'date-fns';
 
 interface SalesPageProps {
   user: User;
@@ -14,6 +14,7 @@ interface SalesPageProps {
 const SalesPage: React.FC<SalesPageProps> = ({ user }) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,26 +22,30 @@ const SalesPage: React.FC<SalesPageProps> = ({ user }) => {
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
-      const fetchedCategories = await getCategories();
-      let fetchedProducts = await getProducts();
+      const [fetchedCategories, initialProducts, fetchedPromotions] = await Promise.all([
+          getCategories(),
+          getProducts(),
+          getPromotions(),
+      ]);
       
       setCategories(fetchedCategories);
+      setPromotions(fetchedPromotions);
       
       if (fetchedCategories.length > 0) {
         setActiveCategoryId(fetchedCategories[0].id);
       }
       
-      // Process promotions
+      let processedProducts = [...initialProducts];
       const promotionPromises = fetchedCategories.map(cat => {
-        const catProducts = fetchedProducts.filter(p => p.categoryId === cat.id);
+        const catProducts = processedProducts.filter(p => p.categoryId === cat.id);
         return getPromotionalProductHighlight(cat.name, catProducts);
       });
 
-      const promotions = await Promise.all(promotionPromises);
+      const aiPromotions = await Promise.all(promotionPromises);
       
-      promotions.forEach(promo => {
+      aiPromotions.forEach(promo => {
         if (promo) {
-          fetchedProducts = fetchedProducts.map(p => 
+          processedProducts = processedProducts.map(p => 
             p.id === promo.productId 
             ? {...p, isPromotional: true, promotionReason: promo.reason}
             : p
@@ -48,7 +53,7 @@ const SalesPage: React.FC<SalesPageProps> = ({ user }) => {
         }
       });
       
-      setProducts(fetchedProducts);
+      setProducts(processedProducts);
       setIsLoading(false);
     };
 
@@ -56,10 +61,32 @@ const SalesPage: React.FC<SalesPageProps> = ({ user }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const productsWithLivePromotions = useMemo(() => {
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const currentHour = new Date().getHours();
+
+    const activeTimedPromos = promotions.filter(p => 
+        p.promotionDate === todayStr && p.hour === currentHour
+    );
+    const activePromoMap = new Map(activeTimedPromos.map(p => [p.productId, p]));
+
+    return products.map(p => {
+        const timedPromo = activePromoMap.get(p.id);
+        if (timedPromo) {
+            return {
+                ...p,
+                isPromotional: true,
+                promotionReason: timedPromo.reason
+            };
+        }
+        return p;
+    });
+  }, [products, promotions]);
+
   const filteredProducts = useMemo(() => {
     if (!activeCategoryId) return [];
     
-    let categoryProducts = products.filter(p => p.categoryId === activeCategoryId);
+    let categoryProducts = productsWithLivePromotions.filter(p => p.categoryId === activeCategoryId);
 
     if (searchQuery.trim() !== '') {
         categoryProducts = categoryProducts.filter(p => 
@@ -68,7 +95,7 @@ const SalesPage: React.FC<SalesPageProps> = ({ user }) => {
     }
     
     return categoryProducts;
-  }, [activeCategoryId, products, searchQuery]);
+  }, [activeCategoryId, productsWithLivePromotions, searchQuery]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6 h-[calc(100vh-100px)]">

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Product } from '../../types';
 import { useCart } from '../../contexts/CartContext';
@@ -36,6 +35,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   }, [availableHours, selectedHour]);
 
   const handleAddToCart = () => {
+    // Show alert for low stock but still allow adding to cart
+    if (product.stock && product.stock <= 5) {
+      window.alert(`¡Alerta de stock bajo! Quedan solo ${product.stock} unidades de "${product.name}".`);
+    }
+
     if (selectedHour !== '') {
       addToCart(product, quantity, selectedHour);
       setQuantity(1);
@@ -57,6 +61,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       <div className="p-4 flex flex-col flex-grow">
         <h3 className="font-semibold text-sm text-theme-card-foreground truncate">{product.name}</h3>
         <p className="text-lg font-bold text-theme-primary mt-1">${product.price.toFixed(2)}</p>
+        <p className={`text-xs mt-1 ${product.stock !== undefined && product.stock <= 5 ? 'text-red-500 font-bold' : 'text-theme-foreground/60'}`}>
+          Stock: {product.stock ?? 'N/A'}
+        </p>
         <div className="mt-4 flex-grow"></div>
         
         <div className="space-y-2 mt-2">

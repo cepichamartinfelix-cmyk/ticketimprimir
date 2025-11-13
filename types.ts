@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   name: string;
@@ -16,6 +15,7 @@ export interface Product {
   name: string;
   categoryId: string;
   price: number;
+  stock?: number;
   isPromotional?: boolean;
   promotionReason?: string;
 }
@@ -42,6 +42,16 @@ export interface Ticket {
   items: TicketItem[];
   total: number;
   status: 'COMPLETED' | 'CANCELLED';
+}
+
+export interface Promotion {
+  id: string;
+  productId: string;
+  productName: string;
+  reason: string;
+  promotionDate: string; // YYYY-MM-DD
+  hour: number;
+  createdAt: Date;
 }
 
 export type Theme = {

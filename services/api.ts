@@ -1,11 +1,13 @@
 
 import { MOCK_DATA } from '../data/mockData';
-import { Product, Ticket, TicketItem, User, CartItem } from '../types';
+import { Product, Ticket, TicketItem, User, CartItem, Promotion } from '../types';
+import { format } from 'date-fns';
 
 let users = [...MOCK_DATA.users];
 let products = [...MOCK_DATA.products];
 let categories = [...MOCK_DATA.categories];
 let tickets = [...MOCK_DATA.tickets];
+let promotions = [...MOCK_DATA.promotions];
 
 // --- User ---
 export const login = async (email: string): Promise<User | null> => {
@@ -21,24 +23,144 @@ export const login = async (email: string): Promise<User | null> => {
 
 export const getUsers = async (): Promise<User[]> => Promise.resolve(users);
 
+export const createUser = async (userData: Omit<User, 'id'>): Promise<User> => {
+    const existingUser = users.find(u => u.email.toLowerCase() === userData.email.toLowerCase());
+    if (existingUser) {
+        throw new Error('El email ya está en uso.');
+    }
+    const newUser: User = {
+        id: `user-${Date.now()}`,
+        ...userData,
+    };
+    users.push(newUser);
+    return Promise.resolve(newUser);
+};
+
+export const updateUser = async (userId: string, updates: Partial<Omit<User, 'id'>>): Promise<User> => {
+    let updatedUser: User | undefined;
+    users = users.map(user => {
+        if (user.id === userId) {
+            updatedUser = { ...user, ...updates };
+            return updatedUser;
+        }
+        return user;
+    });
+
+    if (!updatedUser) {
+        throw new Error('Usuario no encontrado.');
+    }
+    return Promise.resolve(updatedUser);
+};
+
+export const deleteUser = async (userId: string): Promise<{ success: true }> => {
+    const initialLength = users.length;
+    users = users.filter(user => user.id !== userId);
+    if (users.length === initialLength) {
+        throw new Error('Usuario no encontrado.');
+    }
+    return Promise.resolve({ success: true });
+};
+
+
 // --- Catalog ---
 export const getCategories = async () => Promise.resolve(categories);
 
 export const getProducts = async () => Promise.resolve(products);
 
-export const updateSingleProduct = async (productId: string, updates: Partial<Pick<Product, 'isPromotional' | 'promotionReason'>>): Promise<Product> => {
-    let updatedProduct: Product | undefined;
-    products = products.map(p => {
-        if (p.id === productId) {
-            updatedProduct = { ...p, ...updates };
-            return updatedProduct;
-        }
-        return p;
-    });
-    if (!updatedProduct) {
-        throw new Error('Product not found');
+// --- Stock Management ---
+export const updateStock = async (payload: {
+    type: 'all' | 'category' | 'single';
+    quantity: number;
+    categoryId?: string;
+    productId?: string;
+}): Promise<{ success: true, updatedCount: number }> => {
+    const { type, quantity, categoryId, productId } = payload;
+
+    if (quantity < 0 || !Number.isInteger(quantity)) {
+        throw new Error('La cantidad de stock debe ser un número entero no negativo.');
     }
-    return Promise.resolve(updatedProduct);
+
+    let updatedCount = 0;
+
+    if (type === 'all') {
+        products = products.map(p => ({ ...p, stock: quantity }));
+        updatedCount = products.length;
+    } else if (type === 'category' && categoryId) {
+        let categoryExists = false;
+        products = products.map(p => {
+            if (p.categoryId === categoryId) {
+                categoryExists = true;
+                updatedCount++;
+                return { ...p, stock: quantity };
+            }
+            return p;
+        });
+        if (!categoryExists) throw new Error('Categoría no encontrada.');
+    } else if (type === 'single' && productId) {
+        let productExists = false;
+        products = products.map(p => {
+            if (p.id === productId) {
+                productExists = true;
+                updatedCount++;
+                return { ...p, stock: quantity };
+            }
+            return p;
+        });
+        if (!productExists) throw new Error('Producto no encontrado.');
+
+    } else {
+        throw new Error('Parámetros de actualización inválidos.');
+    }
+
+    if (updatedCount === 0 && type !== 'all') {
+        throw new Error('No se encontraron productos para actualizar con los criterios dados.');
+    }
+
+    return Promise.resolve({ success: true, updatedCount });
+};
+
+
+// --- Promotions ---
+export const getPromotions = async (): Promise<Promotion[]> => Promise.resolve(promotions);
+
+export const createPromotion = async (data: { productId: string, productName: string, reason: string, hour: number }): Promise<Promotion> => {
+    const newPromotion: Promotion = {
+        id: `promo-${Date.now()}`,
+        ...data,
+        promotionDate: format(new Date(), 'yyyy-MM-dd'),
+        createdAt: new Date(),
+    };
+    promotions.unshift(newPromotion);
+    return Promise.resolve(newPromotion);
+};
+
+export const deletePromotion = async (promotionId: string): Promise<{ success: true }> => {
+    const initialLength = promotions.length;
+    promotions = promotions.filter(p => p.id !== promotionId);
+    if (promotions.length === initialLength) {
+        throw new Error('Promoción no encontrada.');
+    }
+    return Promise.resolve({ success: true });
+};
+
+export const updatePromotion = async (promotionId: string, updates: Partial<{ reason: string; hour: number }>): Promise<Promotion> => {
+    let updatedPromotion: Promotion | undefined;
+    promotions = promotions.map(promo => {
+        if (promo.id === promotionId) {
+            updatedPromotion = { ...promo, ...updates };
+            return updatedPromotion;
+        }
+        return promo;
+    });
+
+    if (!updatedPromotion) {
+        throw new Error('Promoción no encontrada.');
+    }
+    
+    // Maintain sort order
+    promotions.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    return Promise.resolve(updatedPromotion);
 };
 
 // --- Tickets ---

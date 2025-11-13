@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { Product } from '../types';
 
@@ -64,10 +63,14 @@ export const getPromotionalProductHighlight = async (
     });
 
     const text = response.text.trim();
-    const result = JSON.parse(text);
+    const result: unknown = JSON.parse(text);
 
-    if (result.productId && result.reason && products.some(p => p.id === result.productId)) {
-        return result as PromotionalHighlight;
+    // FIX: Safely parse and type-check the JSON response from the Gemini API to avoid 'unknown' type issues.
+    if (result && typeof result === 'object' && 'productId' in result && 'reason' in result) {
+      const { productId, reason } = result as { productId: unknown, reason: unknown };
+      if (typeof productId === 'string' && typeof reason === 'string' && products.some(p => p.id === productId)) {
+        return { productId, reason };
+      }
     }
     return null;
 

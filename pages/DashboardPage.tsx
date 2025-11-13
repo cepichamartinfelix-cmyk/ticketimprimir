@@ -2,9 +2,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Ticket, User } from '../types';
 import { getTickets, getUsers, cancelTicket as apiCancelTicket } from '../services/api';
-import { subDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parseISO } from 'date-fns';
+// FIX: Import 'startOfDay', 'startOfWeek', and 'startOfMonth' from 'date-fns' to fix undefined function errors.
+import { format, startOfDay, startOfWeek, startOfMonth } from 'date-fns';
 import KpiCard from '../components/dashboard/KpiCard';
 import SalesTable from '../components/dashboard/SalesTable';
+import SellerSalesHistory from '../components/dashboard/SellerSalesHistory';
 
 const DashboardPage: React.FC = () => {
     const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -46,6 +48,16 @@ const DashboardPage: React.FC = () => {
         }
         return tempTickets;
     }, [tickets, filteredUser, filteredHour]);
+    
+    const selectedSeller = useMemo(() => {
+        if (filteredUser === 'all') return null;
+        return users.find(u => u.id === filteredUser);
+    }, [filteredUser, users]);
+
+    const sellerSpecificTickets = useMemo(() => {
+        if (!selectedSeller) return [];
+        return tickets.filter(t => t.userId === selectedSeller.id && t.status === 'COMPLETED');
+    }, [tickets, selectedSeller]);
 
 
     const calculateMetrics = (period: 'day' | 'week' | 'month') => {
@@ -62,6 +74,44 @@ const DashboardPage: React.FC = () => {
         const totalSales = periodTickets.length;
 
         return { netEarnings, totalSales };
+    };
+    
+    const handleExportCSV = () => {
+        if (filteredTickets.length === 0) {
+            alert("No hay datos para exportar.");
+            return;
+        }
+
+        const headers = ['Ticket ID', 'Vendedor', 'Fecha', 'Hora', 'Estado', 'Total'];
+        
+        const escapeCSV = (str: string) => `"${str.replace(/"/g, '""')}"`;
+
+        const csvRows = filteredTickets.map(ticket => [
+            ticket.id,
+            escapeCSV(ticket.userName),
+            format(ticket.createdAt, 'yyyy-MM-dd'),
+            format(ticket.createdAt, 'HH:mm:ss'),
+            ticket.status,
+            ticket.total.toFixed(2)
+        ]);
+
+        const csvContent = [
+            headers.join(','),
+            ...csvRows.map(row => row.join(','))
+        ].join('\n');
+        
+        const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        
+        const dateStr = format(new Date(), 'yyyy-MM-dd');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `reporte_ventas_${dateStr}.csv`);
+        link.style.visibility = 'hidden';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     const dailyMetrics = calculateMetrics('day');
@@ -114,8 +164,28 @@ const DashboardPage: React.FC = () => {
                 <KpiCard title="Ventas Realizadas (Mes)" value={`${monthlyMetrics.totalSales}`} />
             </div>
 
+            {selectedSeller && (
+                <div className="bg-theme-card p-6 rounded-lg shadow-sm border border-theme-border">
+                    <h2 className="text-xl font-semibold mb-4 text-theme-card-foreground">
+                        Historial de Ventas para: {selectedSeller.name}
+                    </h2>
+                    <SellerSalesHistory tickets={sellerSpecificTickets} />
+                </div>
+            )}
+
             <div className="bg-theme-card p-6 rounded-lg shadow-sm">
-                <h2 className="text-xl font-semibold mb-4 text-theme-card-foreground">Ventas Recientes</h2>
+                 <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold text-theme-card-foreground">
+                      {filteredUser !== 'all' ? 'Vista de Ventas Filtradas' : 'Ventas Recientes'}
+                    </h2>
+                    <button
+                      onClick={handleExportCSV}
+                      disabled={filteredTickets.length === 0}
+                      className="px-4 py-2 bg-theme-primary text-white text-sm font-bold rounded-md hover:bg-theme-accent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-theme-ring disabled:opacity-50 transition-colors"
+                    >
+                      Exportar a CSV
+                    </button>
+                </div>
                 <SalesTable tickets={filteredTickets} onCancelTicket={handleCancelTicket} />
             </div>
         </div>

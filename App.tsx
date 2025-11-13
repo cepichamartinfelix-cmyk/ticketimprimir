@@ -10,8 +10,10 @@ import Header from './components/layout/Header';
 import { Ticket } from './types';
 import { generateTicket, cancelTicket as cancelTicketApi } from './services/api';
 import PremioPage from './pages/PremioPage';
+import UsersPage from './pages/UsersPage';
+import AgenciasPage from './pages/AgenciasPage';
 
-type Page = 'sales' | 'dashboard' | 'premio';
+type Page = 'sales' | 'dashboard' | 'premio' | 'users' | 'agencias';
 
 const App: React.FC = () => {
   return (
@@ -53,6 +55,8 @@ const Main: React.FC = () => {
         {currentPage === 'sales' && <SalesPage user={user} />}
         {currentPage === 'dashboard' && <DashboardPage />}
         {currentPage === 'premio' && user.role === 'ADMIN' && <PremioPage />}
+        {currentPage === 'users' && user.role === 'ADMIN' && <UsersPage />}
+        {currentPage === 'agencias' && user.role === 'ADMIN' && <AgenciasPage />}
       </main>
     </div>
   );

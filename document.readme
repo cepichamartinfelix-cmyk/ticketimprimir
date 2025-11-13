@@ -1,0 +1,127 @@
+Arquitectura General
+La aplicación está construida con React y TypeScript, utilizando una arquitectura basada en componentes y un manejo de estado global a través de Context API. Se comunica con una capa de servicio simulada (api.ts) que utiliza datos de prueba (mockData.ts). La interfaz de usuario está diseñada con Tailwind CSS para un estilo rápido y responsivo. Una característica clave es la integración con la API de Gemini para generar promociones de productos de forma inteligente.
+Documentación por Archivo
+index.html
+Propósito: Es el punto de entrada HTML de la aplicación.
+Contenido:
+<head>: Incluye metadatos básicos, el título de la página y la configuración inicial.
+Tailwind CSS: Carga el framework de CSS a través de un CDN y define una configuración básica en un script, extendiendo la paleta de colores con variables CSS (var(--color-primary), etc.) para permitir el temizado dinámico.
+Google Fonts: Importa la fuente "Inter" para una tipografía limpia y moderna.
+importmap: Configura alias para las importaciones de módulos ES6. Esto permite que en el código TypeScript se use import React from 'react' en lugar de una URL completa, facilitando el manejo de dependencias externas como react, @google/genai y date-fns desde un CDN.
+<body>: Contiene el div con id="root" donde se montará toda la aplicación de React, y el script principal index.tsx.
+index.tsx
+Propósito: Es el punto de entrada de la aplicación React.
+Funcionamiento:
+Importa React y ReactDOM.
+Busca el elemento div#root en el index.html.
+Utiliza ReactDOM.createRoot para inicializar la raíz de la aplicación.
+Renderiza el componente principal App dentro de React.StrictMode, que ayuda a detectar problemas potenciales en la aplicación.
+App.tsx
+Propósito: Es el componente raíz que organiza la estructura principal de la aplicación.
+Estructura:
+Providers: Envuelve toda la aplicación en los proveedores de contexto:
+ThemeProvider: Maneja el tema visual (colores, modo oscuro/claro).
+AuthProvider: Gestiona el estado de autenticación del usuario.
+CartProvider: Administra el estado global del carrito de compras.
+Main Component: Este componente interno decide qué mostrar:
+Si no hay un user autenticado, renderiza LoginPage.
+Si hay un user, renderiza la interfaz principal, que consiste en el Header y la página actual (SalesPage, DashboardPage o PremioPage).
+Routing: Utiliza un estado local currentPage para simular la navegación entre páginas sin usar una librería de enrutamiento externa.
+useEffect: Observa los cambios en el theme y aplica las clases y variables CSS correspondientes al elemento <html> para que los estilos se actualicen en toda la aplicación.
+types.ts
+Propósito: Centraliza todas las definiciones de tipos de TypeScript utilizadas en la aplicación, garantizando consistencia y seguridad de tipos.
+Interfaces Definidas:
+User: Estructura para los datos de un usuario (ID, nombre, rol).
+Category: Para las categorías de productos.
+Product: Define un producto, incluyendo si es promocional y la razón.
+CartItem: Un item en el carrito, que contiene el Product y la quantity.
+Ticket y TicketItem: Representan una venta completada (ticket) y los productos dentro de ella.
+Theme: Define la estructura de un tema, incluyendo nombre, si es oscuro, y el mapa de colores CSS.
+constants.ts
+Propósito: Almacena valores constantes.
+Contenido:
+THEMES: Un array de objetos Theme predefinidos que el usuario puede seleccionar. Cada tema especifica una paleta de colores completa para la interfaz.
+Contextos (Manejo de Estado Global)
+contexts/AuthContext.tsx
+Propósito: Gestiona el estado de autenticación del usuario.
+Provee:
+user: El objeto del usuario actualmente logueado (o null).
+login(email): Función asíncrona que llama a la API para autenticar a un usuario y actualiza el estado.
+logout(): Limpia el estado del usuario.
+useAuth(): Hook personalizado para acceder fácilmente a este contexto.
+contexts/CartContext.tsx
+Propósito: Maneja todo lo relacionado con el carrito de compras.
+Provee:
+cart: Array de CartItem con los productos añadidos.
+addToCart, removeFromCart, updateQuantity, clearCart: Funciones para manipular el carrito.
+cartTotal, itemCount: Valores calculados para el total a pagar y la cantidad de productos, que se actualizan automáticamente cuando el carrito cambia.
+useCart(): Hook para acceder al contexto del carrito.
+contexts/ThemeContext.tsx
+Propósito: Gestiona el tema visual de la aplicación.
+Provee:
+theme: El objeto Theme actualmente activo.
+setTheme(theme): Función para cambiar el tema.
+themes: El array de todos los temas disponibles desde constants.ts.
+useTheme(): Hook para acceder al contexto del tema.
+Servicios (Lógica de Negocio y Datos)
+services/api.ts
+Propósito: Simula un backend o una API REST. Centraliza todas las operaciones de "lectura y escritura" de datos.
+Funcionamiento: Mantiene copias en memoria de los datos (users, products, tickets) importados de mockData.ts y exporta funciones asíncronas (async) para interactuar con ellos, como si fueran llamadas a una API real.
+Funciones Clave: login, getCategories, getProducts, generateTicket, cancelTicket, updateSingleProduct.
+services/geminiService.ts
+Propósito: Integra la aplicación con la API de Google Gemini.
+Funcionamiento:
+getPromotionalProductHighlight: Esta función es el núcleo de la integración.
+Recibe una lista de productos de una categoría.
+Construye un prompt detallado pidiéndole a Gemini que actúe como un experto en marketing, seleccione el producto más atractivo y escriba una razón promocional corta.
+Especifica que la respuesta debe estar en formato JSON con un responseSchema definido (productId y reason).
+Realiza la llamada a la API usando ai.models.generateContent.
+Parsea la respuesta y la devuelve.
+Incluye un fallback (plan B) que elige un producto al azar si la clave API no está configurada o si la llamada falla, asegurando que la app siga funcionando.
+data/mockData.ts
+Propósito: Genera un conjunto de datos de prueba coherentes para que la aplicación tenga contenido desde el inicio.
+Funcionamiento: Utiliza la librería date-fns para generar fechas realistas. Contiene funciones que crean arrays de usuarios, categorías, productos y un historial de tickets de venta, asegurando que las relaciones entre ellos (ej. categoryId en un producto) sean correctas.
+Páginas (Vistas Principales)
+pages/LoginPage.tsx
+Propósito: Muestra el formulario de inicio de sesión.
+Características:
+Un formulario simple para ingresar un email.
+Manejo de estado para el campo de email, errores y estado de carga (isLoading).
+Al enviar, llama a la función login del AuthContext.
+Muestra mensajes de error claros si el login falla.
+pages/SalesPage.tsx
+Propósito: Es la vista principal de Punto de Venta (POS).
+Estructura y Lógica:
+Layout: Se divide en dos secciones principales: a la izquierda la selección de productos y a la derecha el carrito.
+Carga de Datos (useEffect): Al montarse, obtiene las categorías y productos de la API. Luego, para cada categoría, llama a geminiService para obtener una recomendación de producto promocional. Actualiza los productos con esta información de la IA.
+Estado: Maneja el estado de carga, la lista de productos y categorías, la categoría activa y la consulta de búsqueda (searchQuery).
+Filtrado (useMemo): Filtra los productos a mostrar de manera eficiente. La lista se recalcula solo si la categoría activa, la lista de productos o la búsqueda cambian. Primero filtra por categoría y luego por el texto de búsqueda.
+Componentes: Orquesta los componentes CategoryTabs, ProductGrid y Cart para construir la interfaz.
+Barra de Búsqueda: Un campo de texto que actualiza el estado searchQuery y provoca que la lista de productos se filtre en tiempo real.
+pages/DashboardPage.tsx
+Propósito: Muestra métricas y un historial de ventas.
+Características:
+Carga de Datos: Obtiene todos los tickets y usuarios al cargar.
+Filtros: Permite filtrar la lista de tickets por vendedor y por hora de venta.
+Métricas (KPIs): Calcula y muestra las ganancias netas y el total de ventas para el día, la semana y el mes actual usando KpiCard.
+Tabla de Ventas: Muestra una lista paginada de las ventas recientes en el componente SalesTable, con la opción de anular tickets.
+Cancelación: Implementa la lógica para llamar a la API y anular un ticket, actualizando la interfaz.
+pages/PremioPage.tsx
+Propósito: Página de administración (solo para rol 'ADMIN') para gestionar productos promocionales.
+Características:
+Muestra los productos organizados por categorías.
+Para cada producto (PremioProductCard), permite a un administrador:
+Marcarlo o desmarcarlo como "promocional".
+Escribir un texto personalizado para la promoción (que se mostrará como tooltip).
+Guardar los cambios, que persisten a través de updateSingleProduct en la API.
+Componentes Reutilizables
+components/layout/Header.tsx: La barra de navegación superior. Muestra el título, los botones de navegación, un selector de temas, información del usuario y el botón de salir.
+components/sales/CategoryTabs.tsx: Renderiza las pestañas para seleccionar una categoría de productos.
+components/sales/ProductGrid.tsx: Muestra una cuadrícula responsiva de ProductCard.
+components/sales/ProductCard.tsx: Tarjeta para un solo producto. Muestra nombre, precio, y permite seleccionar cantidad y hora de venta para añadirlo al carrito. Resalta visualmente los productos promocionales.
+components/sales/Cart.tsx: El componente completo del carrito. Muestra los items, el total, y los botones de acción (Generar Venta, Imprimir, Vaciar).
+components/sales/CartItem.tsx: Representa un solo producto dentro del carrito, con controles para cambiar la cantidad o eliminarlo.
+components/sales/TicketModal.tsx: Un modal que aparece después de una venta exitosa. Muestra un resumen del ticket y un botón para imprimirlo en formato de impresora térmica.
+components/dashboard/KpiCard.tsx: Una tarjeta simple para mostrar un indicador clave de rendimiento (ej. "Ganancias Hoy").
+components/dashboard/SalesTable.tsx: Una tabla con paginación para mostrar el historial de ventas.
+components/premio/PremioProductCard.tsx: Tarjeta específica para la página de "Premio" que permite editar el estado promocional de un producto.
